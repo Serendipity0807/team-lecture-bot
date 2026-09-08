@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # Auth routes -> user-course-microservice
+        - id: user-course-auth
+          uri: lb://user-course-microservice
+          predicates:
+            - Path=/api/auth/**
+
+        # User routes -> user-course-microservice
+        - id: user-course-user
+          uri: lb://user-course-microservice
+          predicates:
+            - Path=/api/v1/user/**
+
+        # GenAI Ask routes -> genai-backend-microservice (must be before generic coursespaces route)
+        - id: genai-ask
+          uri: lb://genai-backend-microservice
+          predicates:
+            - Path=/api/coursespaces/*/ask/**
+
+        # GenAI Flashcards routes -> genai-backend-microservice (must be before generic coursespaces route)
+        - id: genai-flashcards
+          uri: lb://genai-backend-microservice
+          predicates:
+            - Path=/api/coursespaces/*/flashcards/**
+
+        # Document routes -> document-microservice
+        - id: document-service
+          uri: lb://document-microservice
+          predicates:
+            - Path=/api/v1/documents/**
+
+        # Course space routes -> user-course-microservice
+        # NOTE: must be defined AFTER genai-ask and genai-flashcards so those take precedence
+        - id: user-course-coursespaces
+          uri: lb://user-course-microservice
+          predicates:
+            - Path=/api/coursespaces/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
